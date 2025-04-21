@@ -13,16 +13,33 @@ if uploaded_file:
     st.subheader("📋 Eredeti táblázat")
     st.dataframe(df)
 
+    # Oszlopválasztó: csak szöveges típusú oszlopokat ajánl fel
+    text_cols = [col for col in df.columns if df[col].dtype == object]
+    selected_cols = st.multiselect(
+        "Válaszd ki, mely oszlopokat fordítsa le (csak szöveges oszlopok):",
+        options=text_cols,
+        default=text_cols
+    )
+
     if st.button("🔁 Fordítás oroszra"):
         translator = Translator()
 
-        def translate_cell(x):
+        # Fejléc fordítása
+        def translate_header(header):
             try:
-                return translator.translate(x, src='hu', dest='ru').text if isinstance(x, str) else x
+                return translator.translate(header, src='hu', dest='ru').text
             except:
-                return x  # Hiba esetén hagyja eredetiben
+                return header
 
-        translated_df = df.applymap(translate_cell)
+        new_columns = [translate_header(col) for col in df.columns]
+
+        # Csak a kiválasztott oszlopokat fordítja le cellánként
+        translated_df = df.copy()
+        for col in selected_cols:
+            translated_df[col] = translated_df[col].apply(
+                lambda x: translator.translate(x, src='hu', dest='ru').text if isinstance(x, str) else x
+            )
+        translated_df.columns = new_columns
 
         st.subheader("🌐 Lefordított táblázat")
         st.dataframe(translated_df)
